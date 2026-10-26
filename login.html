@@ -6,36 +6,55 @@
 <title>Partner Login</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Baloo+2:wght@700;800&display=swap">
 <link rel="stylesheet" href="/assets/style.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2314202E'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23F2B705' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='2.6' fill='%23F2B705'/%3E%3Cpath d='M16 7.4V12.6M16 19.4V24.6M7.4 16H12.6M19.4 16H24.6' stroke='%23F2B705' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  .auth-wrap { max-width: 920px; }
+</style>
 </head>
 <body>
 
-<div class="wrap">
+<div class="wrap auth-wrap">
   <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
     <select id="langSwitch" style="min-height:32px;border-radius:6px;border:1px solid var(--line-strong);background:var(--surface);padding:4px 8px;font-size:12px;"></select>
   </div>
-  <header class="head">
-    <span class="eyebrow" data-i18n="login_eyebrow">Partner portal</span>
-    <h1 data-i18n="login_title">Sign in</h1>
-    <p class="lede"><span data-i18n="login_lede_pre">Not registered yet? </span><a href="/register.html" data-i18n="login_lede_link">Create a partner account</a><span data-i18n="login_lede_post">.</span></p>
-  </header>
 
-  <section class="card">
-    <form id="loginForm" novalidate>
-      <div class="field">
-        <label for="email" data-i18n="login_email">Email</label>
-        <input type="email" id="email" autocomplete="email" autofocus required>
+  <div class="auth-frame">
+    <div class="auth-hero" style="justify-content:center;">
+      <div>
+        <div class="brand-row" style="margin-bottom:18px;">
+          <span class="brand-mark-icon">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.2" aria-hidden="true"><path d="M3 13c3-8 8-10.5 14-10.5" stroke-linecap="round"/><circle cx="17.3" cy="3" r="1.6" fill="#fff" stroke="none"/></svg>
+          </span>
+          <span class="brand-wordmark on-dark">mozio</span>
+        </div>
+        <p class="auth-eyebrow" data-i18n="login_hero_eyebrow">Partner network</p>
+        <h3 class="auth-headline" data-i18n="login_hero_headline">Welcome back.</h3>
       </div>
-      <div class="field">
-        <label for="password" data-i18n="login_password">Password</label>
-        <input type="password" id="password" autocomplete="current-password" required>
-      </div>
-      <button type="submit" class="btn" id="loginBtn" data-i18n="login_btn">Sign in</button>
-      <p class="status" id="status" role="status" aria-live="polite"></p>
-    </form>
-  </section>
+    </div>
+
+    <div class="auth-form-panel">
+      <header class="head" style="margin-bottom:16px;">
+        <span class="eyebrow" data-i18n="login_eyebrow">Partner portal</span>
+        <h1 data-i18n="login_title">Sign in</h1>
+        <p class="lede" style="margin-top:8px;"><span data-i18n="login_lede_pre">Not registered yet? </span><a href="/register.html" data-i18n="login_lede_link">Create a partner account</a><span data-i18n="login_lede_post">.</span></p>
+      </header>
+
+      <form id="loginForm" novalidate style="margin-top:auto;">
+        <div class="field">
+          <label for="email" data-i18n="login_email">Email</label>
+          <input type="email" id="email" autocomplete="email" autofocus required>
+        </div>
+        <div class="field">
+          <label for="password" data-i18n="login_password">Password</label>
+          <input type="password" id="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn" id="loginBtn" data-i18n="login_btn">Sign in</button>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
 </div>
 
 <script src="/assets/i18n.js"></script>

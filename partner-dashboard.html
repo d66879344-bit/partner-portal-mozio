@@ -6,7 +6,7 @@
 <title>Partner Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Baloo+2:wght@700;800&display=swap">
 <link rel="stylesheet" href="/assets/style.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2314202E'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23F2B705' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='2.6' fill='%23F2B705'/%3E%3Cpath d='M16 7.4V12.6M16 19.4V24.6M7.4 16H12.6M19.4 16H24.6' stroke='%23F2B705' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
@@ -16,7 +16,7 @@
   /* The sidebar stays put; only .dash-main scrolls — the shell itself never scrolls. */
   .dash-shell { display: flex; flex-wrap: wrap; align-items: flex-start; height: 100vh; overflow: hidden; }
   .dash-sidebar {
-    width: 240px; flex: 0 0 240px; background: linear-gradient(180deg, #0B1E35 0%, #081627 100%);
+    width: 240px; flex: 0 0 240px; background: linear-gradient(180deg, #0B2A63 0%, #081A4A 100%);
     padding: 24px 14px; display: flex; flex-direction: column; box-sizing: border-box; height: 100vh; overflow-y: auto;
   }
   .dash-brand { padding: 2px 10px 24px; }
@@ -346,6 +346,12 @@
 <div class="dash-shell">
   <aside class="dash-sidebar">
     <div class="dash-brand">
+      <div class="brand-row" style="margin-bottom:12px;">
+        <span class="brand-mark-icon">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.2" aria-hidden="true"><path d="M3 13c3-8 8-10.5 14-10.5" stroke-linecap="round"/><circle cx="17.3" cy="3" r="1.6" fill="#fff" stroke="none"/></svg>
+        </span>
+        <span class="brand-wordmark on-dark" style="font-size:17px;">mozio</span>
+      </div>
       <div class="dash-brand-name" id="whoCompany">…</div>
       <div class="dash-brand-sub">Partner Portal</div>
     </div>
@@ -381,6 +387,7 @@
       <button type="button" class="tab" data-tab="contract" aria-pressed="false">
         <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 2.5h7l3 3v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z"/><path d="M6.5 8h7M6.5 10.5h5" stroke-linecap="round"/><path d="M6.5 14.2c1-.6 1.6-.6 2.2 0s1.2.6 2.2 0 1.6-.6 2.6 0" stroke-linecap="round"/></svg>
         <span data-i18n="nav_contract">Contract</span>
+        <span class="tab-dot" id="contractTabDot" hidden title="Confirmation needed"></span>
       </button>
       <button type="button" class="tab" data-tab="referrals" aria-pressed="false">
         <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 12a4 4 0 0 1 0-5.6l2-2a4 4 0 0 1 5.6 5.6l-1 1" stroke-linecap="round"/><path d="M12 8a4 4 0 0 1 0 5.6l-2 2a4 4 0 0 1-5.6-5.6l1-1" stroke-linecap="round"/></svg>
@@ -754,6 +761,13 @@
       <div class="dash-pagehead">
         <h1 data-i18n="dash_contract_title">Contract</h1>
         <p class="sub" data-i18n="dash_contract_sub">Your cooperation agreement with us, once it's been signed by both sides.</p>
+      </div>
+      <div class="alert-banner section-card" id="contractConfirmAlert" hidden style="margin-bottom:18px;">
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 1.5 1 17h18L10 1.5Zm0 5.2 5.6 9.5H4.4L10 6.7Z"/><rect x="9.1" y="8.5" width="1.8" height="4.4" rx="0.9"/><circle cx="10" cy="14.4" r="1.1"/></svg>
+        <div>
+          <strong data-i18n="contract_confirm_alert_title">Please confirm you've reviewed this contract</strong>
+          <p data-i18n="contract_confirm_alert_body">Clicking Confirm records that you've read and accept it — nothing else on your account is affected either way.</p>
+        </div>
       </div>
       <div class="card section-card" id="contractCard"></div>
     </section>

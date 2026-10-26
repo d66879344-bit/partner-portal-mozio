@@ -1466,11 +1466,15 @@
       myFleet.vehicles.some(function (v) { return v.status !== "approved"; }) ||
       myFleet.drivers.some(function (d) { return d.status !== "approved"; });
     var payNeeds = paymentDetailsMissing();
+    var contractDoc = (myFleet.contract && myFleet.contract.documents && myFleet.contract.documents[0]) || null;
+    var contractNeeds = !!(contractDoc && !contractDoc.confirmedAt);
     if ($("companyTabDot")) $("companyTabDot").hidden = !companyNeeds;
     if ($("fleetTabDot")) $("fleetTabDot").hidden = !fleetNeeds;
     if ($("companyDocAlert")) $("companyDocAlert").hidden = !companyNeeds;
     if ($("accountTabDot")) $("accountTabDot").hidden = !payNeeds;
     if ($("payDetailsAlert")) $("payDetailsAlert").hidden = !payNeeds;
+    if ($("contractTabDot")) $("contractTabDot").hidden = !contractNeeds;
+    if ($("contractConfirmAlert")) $("contractConfirmAlert").hidden = !contractNeeds;
   }
 
   async function loadFleet() {
@@ -1478,6 +1482,7 @@
     myFleet = { company: data.company, other: data.other, contract: data.contract || { documents: [] }, vehicles: data.vehicles || [], drivers: data.drivers || [] };
     renderFleetList();
     renderContractPanel();
+    updateDocAlerts();
     if (currentForm && currentForm.id) {
       if (currentForm.type === "vehicle") renderVehicleForm();
       else renderDriverForm();
@@ -1498,12 +1503,32 @@
         (window.I18N ? esc(I18N.t("contract_none")) : "Your contract hasn't been uploaded yet.") + "</p>";
       return;
     }
+    var statusHtml = doc.confirmedAt
+      ? '<span class="badge badge-approved" style="flex:none;">' +
+        esc(window.I18N ? I18N.t("contract_confirmed_badge") : "Confirmed") + " " + esc(fmtDate(doc.confirmedAt)) + "</span>"
+      : '<button type="button" class="minibtn good" id="contractConfirmBtn" style="flex:none;">' +
+        esc(window.I18N ? I18N.t("contract_confirm_btn") : "Confirm") + "</button>";
     el.innerHTML = '<div class="doc-row">' +
       '<div class="doc-icon">' + FILE_ICON + "</div>" +
       '<div class="doc-meta"><div class="doc-name">' + esc(doc.filename || "contract") + '</div>' +
       '<div class="doc-sub">' + esc(window.I18N ? I18N.t("contract_uploaded_on") : "Uploaded") + " " + esc(fmtDate(doc.uploadedAt)) + "</div></div>" +
       '<a class="minibtn" href="/api/partner/file?id=' + doc.id + '" target="_blank" rel="noopener">' + esc(window.I18N ? I18N.t("btn_download") : "Download") + "</a>" +
+      statusHtml +
       "</div>";
+    var confirmBtn = $("contractConfirmBtn");
+    if (confirmBtn) confirmBtn.addEventListener("click", confirmContract);
+  }
+
+  async function confirmContract() {
+    var btn = $("contractConfirmBtn");
+    if (btn) btn.disabled = true;
+    try {
+      await api("/api/partner/contract-confirm", { method: "POST", json: true, body: "{}" });
+      await loadFleet();
+    } catch (e) {
+      if (btn) btn.disabled = false;
+      alert("Could not confirm the contract. Try again.");
+    }
   }
 
   /* ---------- referrals ----------

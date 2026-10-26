@@ -6,7 +6,7 @@
 <title>Partner CRM Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Baloo+2:wght@700;800&display=swap">
 <link rel="stylesheet" href="/assets/style.css">
 <style>
   body { background: var(--bg); }
@@ -19,7 +19,7 @@
      when focus moves off the button being replaced. */
   .dash-shell { display: flex; flex-wrap: wrap; align-items: flex-start; height: 100vh; overflow: hidden; }
   .dash-sidebar {
-    width: 240px; flex: 0 0 240px; background: linear-gradient(180deg, #0B1E35 0%, #081627 100%);
+    width: 240px; flex: 0 0 240px; background: linear-gradient(180deg, #0B2A63 0%, #081A4A 100%);
     padding: 24px 14px; display: flex; flex-direction: column; box-sizing: border-box; height: 100vh; overflow-y: auto;
   }
   .dash-brand { padding: 2px 10px 24px; }
@@ -157,6 +157,12 @@
 <div class="dash-shell" id="panelsWrap" hidden>
   <aside class="dash-sidebar">
     <div class="dash-brand">
+      <div class="brand-row" style="margin-bottom:12px;">
+        <span class="brand-mark-icon">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.2" aria-hidden="true"><path d="M3 13c3-8 8-10.5 14-10.5" stroke-linecap="round"/><circle cx="17.3" cy="3" r="1.6" fill="#fff" stroke="none"/></svg>
+        </span>
+        <span class="brand-wordmark on-dark" style="font-size:17px;">mozio</span>
+      </div>
       <div class="dash-brand-name">Admin</div>
       <div class="dash-brand-sub">Partner Portal</div>
     </div>

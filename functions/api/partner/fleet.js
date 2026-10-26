@@ -9,6 +9,7 @@ function docShape(d) {
     status: d.status,
     reviewNote: d.review_note,
     uploadedAt: d.uploaded_at,
+    confirmedAt: d.confirmed_at || null,
   };
 }
 
@@ -32,7 +33,7 @@ export async function onRequestGet(context) {
     env.DB.prepare("SELECT id, plate, category, make, created_at FROM vehicles WHERE partner_id = ? ORDER BY id ASC").bind(partnerId).all(),
     env.DB.prepare("SELECT id, full_name, phone, language, created_at FROM drivers WHERE partner_id = ? ORDER BY id ASC").bind(partnerId).all(),
     env.DB.prepare(
-      "SELECT id, owner_type, owner_id, field, label, filename, status, review_note, uploaded_at FROM documents WHERE partner_id = ? ORDER BY uploaded_at DESC"
+      "SELECT id, owner_type, owner_id, field, label, filename, status, review_note, uploaded_at, confirmed_at FROM documents WHERE partner_id = ? ORDER BY uploaded_at DESC"
     ).bind(partnerId).all(),
   ]);
 

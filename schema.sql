@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS documents (
   status TEXT NOT NULL DEFAULT 'pending',       -- pending | approved | rejected
   review_note TEXT,
   uploaded_at TEXT NOT NULL DEFAULT (datetime('now')),
-  reviewed_at TEXT
+  reviewed_at TEXT,
+  confirmed_at TEXT              -- contract docs only: when the partner clicked "Confirm"; NULL until then, reset by re-upload (replace = delete + insert)
 );
 
 CREATE TABLE IF NOT EXISTS orders (
