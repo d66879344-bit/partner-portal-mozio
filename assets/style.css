@@ -97,6 +97,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .brand-wordmark.on-dark { color: #fff; }
 
+/* real logo file, white badge for use on dark hero panels (home header,
+   login/register hero) ---------- */
+.brand-logo-badge {
+  display: inline-flex; align-items: center; background: #fff;
+  border-radius: 10px; padding: 12px 20px;
+  box-shadow: 0 3px 10px rgba(0,0,0,.18);
+}
+.brand-logo-badge img { display: block; height: 42px; width: auto; }
+.brand-logo-badge-sm { padding: 7px 12px; border-radius: 8px; }
+.brand-logo-badge-sm img { height: 20px; }
+
 .section { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
 .section:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 .section h2 { margin-bottom: 4px; }
