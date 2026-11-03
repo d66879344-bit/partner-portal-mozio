@@ -13,6 +13,9 @@
   var partnersPage = 1;
   var ordersPage = 1;
   var financePage = 1;
+  var passengers = [];
+  var passengersPage = 1;
+  var passengersLoaded = false;
   var BILLING_COMPANIES = ["ShuttleDirect", "Mozio"];
   var INVOICE_STATUSES = ["generated", "sent", "received", "processing", "paid"];
   var TRIAL_SIMULATE_ACCOUNT_ID = "id656888"; // testing-only toggle, restricted to this one account
@@ -86,6 +89,10 @@
     tab.addEventListener("click", function () {
       $("mainTabs").querySelectorAll(".tab").forEach(function (t) { t.setAttribute("aria-pressed", String(t === tab)); });
       document.querySelectorAll(".panel").forEach(function (p) { p.classList.toggle("active", p.id === "panel-" + tab.getAttribute("data-tab")); });
+      if (tab.getAttribute("data-tab") === "passengers" && !passengersLoaded) {
+        passengersLoaded = true;
+        loadPassengers();
+      }
     });
   });
 
@@ -186,7 +193,6 @@
     var pageResult = window.Paginate ? Paginate.slice(rows, partnersPage, PAGE_SIZE) : { page: 1, pages: 1, items: rows };
     partnersPage = pageResult.page;
     $("partnersList").innerHTML = pageResult.items.map(function (p) {
-      var isOpen = openId === p.id;
       return '<tr class="data-row" data-toggle="' + p.id + '">' +
         '<td class="col-main">' + esc(p.companyName) + "</td>" +
         "<td>" + esc(p.email) + "</td>" +
@@ -195,9 +201,8 @@
         "<td>" + badge(p.status) + "</td>" +
         "<td>" + trialPillHtml(p.trialStartedAt, p.trialSimulateEnded) + "</td>" +
         "<td>" + (p.organization ? esc(p.organization) : '<span style="color:var(--ink-2);">—</span>') + "</td>" +
-        '<td class="col-chev">' + (isOpen ? "▾" : "›") + "</td>" +
-        "</tr>" +
-        '<tr><td colspan="8" class="detail-cell"><div class="detail' + (isOpen ? " open" : "") + '" id="detail-' + p.id + '"></div></td></tr>';
+        '<td class="col-chev">›</td>' +
+        "</tr>";
     }).join("");
     $("partnersPager").innerHTML = window.Paginate ? Paginate.barHtml(pageResult.page, pageResult.pages) : "";
     if (openId != null) renderDetail(openId);
@@ -206,14 +211,36 @@
   $("partnersList").addEventListener("click", function (e) {
     var toggle = e.target.closest("[data-toggle]");
     if (!toggle) return;
-    var id = Number(toggle.getAttribute("data-toggle"));
-    openId = openId === id ? null : id;
-    renderPartners();
+    openPartnerDetail(Number(toggle.getAttribute("data-toggle")));
   });
 
+  // Opens the full-page partner detail view in place of the list — same
+  // pattern as the partner-side Orders tab (openOrderDetail/closeOrderDetail
+  // in partner-dashboard.js): the list hides, the detail view takes over the
+  // whole panel with a "← Back" button, instead of expanding inline in the
+  // table. Paints instantly from whatever we already have in `partners`
+  // (company name + status), then renderDetail() fills in the rest once the
+  // full detail has loaded (or instantly from detailCache, if already warm).
+  function openPartnerDetail(id) {
+    var quick = partners.filter(function (x) { return x.id === id; })[0];
+    openId = id;
+    $("pdTitle").textContent = quick ? quick.companyName : "Partner";
+    $("pdStatusBadge").innerHTML = quick ? badge(quick.status) : "";
+    $("partnersListView").hidden = true;
+    $("partnerDetailView").hidden = false;
+    window.scrollTo(0, 0);
+    renderDetail(id);
+  }
+  function closePartnerDetail() {
+    openId = null;
+    $("partnerDetailView").hidden = true;
+    $("partnersListView").hidden = false;
+  }
+  if ($("pdBack")) $("pdBack").addEventListener("click", closePartnerDetail);
+
   async function renderDetail(id) {
-    var el = $("detail-" + id);
-    if (!el) return;
+    var el = $("pdBody");
+    if (!el || openId !== id) return;
     if (!detailCache[id]) {
       el.innerHTML = "Loading…";
       try {
@@ -222,9 +249,12 @@
         el.innerHTML = "Could not load details.";
         return;
       }
+      if (openId !== id) return; // navigated away (e.g. clicked Back) while this was loading
     }
     var d = detailCache[id];
     var p = d.partner;
+    $("pdTitle").textContent = p.companyName;
+    $("pdStatusBadge").innerHTML = badge(p.status);
 
 
     function docList(docs) {
@@ -360,8 +390,7 @@
   // until the fresh data is ready (then swapping in one go) avoids that
   // collapse entirely.
   async function refreshDetail(id) {
-    var el = $("detail-" + id);
-    if (!el) return;
+    if (id == null) return;
     try {
       detailCache[id] = await api("/api/admin/partner-detail?id=" + id);
     } catch (e) {
@@ -370,7 +399,7 @@
     if (openId === id) renderDetail(id); // re-renders from the now-fresh cache, no extra network call
   }
 
-  $("partnersList").addEventListener("click", async function (e) {
+  $("partnerDetailView").addEventListener("click", async function (e) {
     var approveDoc = e.target.closest("[data-doc-approve]");
     var rejectDoc = e.target.closest("[data-doc-reject]");
     var approveP = e.target.closest("[data-partner-approve]");
@@ -397,7 +426,7 @@
           body: JSON.stringify({ id: delPid })
         });
         delete detailCache[delPid];
-        openId = null;
+        closePartnerDetail();
         await loadPartners();
       } catch (err) {
         alert("Could not delete the partner.");
@@ -451,7 +480,7 @@
   $("fTrialState").addEventListener("change", function () { partnersPage = 1; renderPartners(); });
   $("fOrganization").addEventListener("change", function () { partnersPage = 1; renderPartners(); });
 
-  $("partnersList").addEventListener("click", async function (e) {
+  $("partnerDetailView").addEventListener("click", async function (e) {
     var saveOrg = e.target.closest("[data-organization-save]");
     if (!saveOrg) return;
     e.stopPropagation();
@@ -472,7 +501,7 @@
     }
   });
 
-  $("partnersList").addEventListener("click", async function (e) {
+  $("partnerDetailView").addEventListener("click", async function (e) {
     var saveBilling = e.target.closest("[data-billing-save]");
     var savePay = e.target.closest("[data-pay-save]");
     var uploadContract = e.target.closest("[data-contract-upload]");
@@ -573,7 +602,7 @@
     }
   });
 
-  $("partnersList").addEventListener("change", async function (e) {
+  $("partnerDetailView").addEventListener("change", async function (e) {
     var toggle = e.target.closest("[data-trial-simulate]");
     if (!toggle) return;
     var tpid = Number(toggle.getAttribute("data-trial-simulate"));
@@ -595,7 +624,7 @@
 
   // Updates the filename text next to any custom file-chooser label (see
   // fileChooserHtml) as soon as a file is picked.
-  $("partnersList").addEventListener("change", function (e) {
+  $("partnerDetailView").addEventListener("change", function (e) {
     var fileInput = e.target.closest('input[type="file"][id]');
     if (!fileInput) return;
     var nameEl = document.querySelector('[data-file-chooser-name="' + fileInput.id + '"]');
@@ -829,12 +858,102 @@
   });
   $("finPrintBtn").addEventListener("click", function () { window.print(); });
 
+  /* ---------- passengers ---------- */
+  async function loadPassengers() {
+    $("passengersStatus").textContent = "Loading…";
+    $("passengersStatus").className = "status";
+    try {
+      var data = await api("/api/admin/passengers");
+      passengers = data.passengers || [];
+      populatePassengerCityFilter();
+      passengersPage = 1;
+      renderPassengers();
+      $("passengersStatus").textContent = passengers.length + " passenger record(s)";
+    } catch (e) {
+      if (e.message === "unauthorized") {
+        $("gateStatus").textContent = "Wrong password.";
+        showGate();
+      } else {
+        $("passengersStatus").textContent = "Could not load passengers.";
+        $("passengersStatus").className = "status err";
+      }
+    }
+  }
+
+  function matchesPassengerFilter(p) {
+    var fc = $("fPassengerCity").value;
+    var from = $("fPassengerFrom").value, to = $("fPassengerTo").value;
+    if (fc && p.city !== fc) return false;
+    if (from && (!p.tripDate || p.tripDate < from)) return false;
+    if (to && (!p.tripDate || p.tripDate > to)) return false;
+    return true;
+  }
+
+  function populatePassengerCityFilter() {
+    var prev = $("fPassengerCity").value;
+    var seen = {};
+    var rows = [];
+    passengers.forEach(function (p) {
+      if (!p.city || seen[p.city]) return;
+      seen[p.city] = true;
+      rows.push(p.city);
+    });
+    rows.sort(function (a, b) { return a.localeCompare(b); });
+    $("fPassengerCity").innerHTML = '<option value="">All cities</option>' +
+      rows.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + "</option>"; }).join("");
+    $("fPassengerCity").value = prev;
+  }
+
+  function updatePassengersExportLink() {
+    var params = [];
+    var fc = $("fPassengerCity").value, from = $("fPassengerFrom").value, to = $("fPassengerTo").value;
+    if (fc) params.push("city=" + encodeURIComponent(fc));
+    if (from) params.push("from=" + encodeURIComponent(from));
+    if (to) params.push("to=" + encodeURIComponent(to));
+    var qs = params.length ? "&" + params.join("&") : "";
+    $("passengersExportLink").href = "/api/admin/passengers-export?secret=" + encodeURIComponent(secret) + qs;
+  }
+
+  function renderPassengers() {
+    var rows = passengers.filter(matchesPassengerFilter);
+    updatePassengersExportLink();
+    if (!rows.length) {
+      $("passengersList").innerHTML = '<tr><td colspan="5" class="empty-cell">No passengers match these filters.</td></tr>';
+      $("passengersPager").innerHTML = "";
+      return;
+    }
+    var pageResult = window.Paginate ? Paginate.slice(rows, passengersPage, PAGE_SIZE) : { page: 1, pages: 1, items: rows };
+    passengersPage = pageResult.page;
+    $("passengersList").innerHTML = pageResult.items.map(function (p) {
+      return "<tr>" +
+        '<td class="col-main">' + esc(p.name) + "</td>" +
+        "<td>" + esc(p.phone || "—") + "</td>" +
+        "<td>" + esc(p.city || "—") + "</td>" +
+        '<td class="mono">' + esc(fmtDay(p.tripDate)) + "</td>" +
+        '<td class="mono">' + (p.orderNumber ? "#" + esc(p.orderNumber) : "—") + "</td>" +
+        "</tr>";
+    }).join("");
+    $("passengersPager").innerHTML = window.Paginate ? Paginate.barHtml(pageResult.page, pageResult.pages) : "";
+  }
+  wirePagerContainer("passengersPager", function () { return passengersPage; }, function (p) { passengersPage = p; }, renderPassengers);
+
+  $("fPassengerCity").addEventListener("change", function () { passengersPage = 1; renderPassengers(); });
+  $("fPassengerFrom").addEventListener("change", function () { passengersPage = 1; renderPassengers(); });
+  $("fPassengerTo").addEventListener("change", function () { passengersPage = 1; renderPassengers(); });
+  $("passengersClearBtn").addEventListener("click", function () {
+    $("fPassengerCity").value = "";
+    $("fPassengerFrom").value = "";
+    $("fPassengerTo").value = "";
+    passengersPage = 1;
+    renderPassengers();
+  });
+
   (function initVehicleTypes() {
     var types = (window.VEHICLE_TYPES || []);
     $("opVehicleType").innerHTML = types.map(function (t) { return '<option value="' + esc(t) + '">' + esc(t) + "</option>"; }).join("");
   })();
 
-  $("createOrderBtn").addEventListener("click", async function () {
+  function submitCreateOrder(asDraft) {
     var partnerId = Number($("opPartner").value);
     var pickup = $("opPickup").value.trim();
     var dropoff = $("opDropoff").value.trim();
@@ -844,25 +963,26 @@
       $("createOrderStatus").className = "status err";
       return;
     }
-    this.disabled = true;
-    var btn = this;
+    $("createOrderBtn").disabled = true;
+    $("createDraftBtn").disabled = true;
     var attempts = 0;
     (async function attempt() {
       try {
         await api("/api/admin/orders", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            orderNumber: $("opOrderNumber").value.trim(), partnerId: partnerId, pickup: pickup, dropoff: dropoff, orderDate: orderDate,
+            orderNumber: $("opOrderNumber").value.trim(), adminNumber: $("opAdminNumber").value.trim(), partnerId: partnerId, pickup: pickup, dropoff: dropoff, orderDate: orderDate,
             flightNumber: $("opFlight").value.trim(), flightTime: $("opFlightTime").value, bufferMinutes: $("opBuffer").value.trim(),
             orderTime: $("opTime").value, vehicleType: $("opVehicleType").value,
             vehiclesNeeded: $("opVehiclesNeeded").value.trim() || "1",
             passengers: $("opPassengers").value.trim(), luggage: $("opLuggage").value.trim(),
             passengerName: $("opPassengerName").value.trim(), passengerPhone: $("opPassengerPhone").value.trim(),
             price: $("opPrice").value.trim(), currency: $("opCurrency").value || "EUR",
-            meetGreet: $("opMeetGreet").value.trim(), notes: $("opNotes").value.trim()
+            meetGreet: $("opMeetGreet").value.trim(), notes: $("opNotes").value.trim(),
+            status: asDraft ? "draft" : "offered"
           })
         });
-        ["opOrderNumber", "opPickup", "opDropoff", "opFlight", "opFlightTime", "opBuffer", "opDate", "opTime", "opPassengers", "opLuggage",
+        ["opOrderNumber", "opAdminNumber", "opPickup", "opDropoff", "opFlight", "opFlightTime", "opBuffer", "opDate", "opTime", "opPassengers", "opLuggage",
           "opPassengerName", "opPassengerPhone", "opPrice", "opMeetGreet", "opNotes"].forEach(function (id) { $(id).value = ""; });
         $("opCurrency").value = "EUR";
         $("opVehiclesNeeded").value = "1";
@@ -870,10 +990,13 @@
         bufferManual = false;
         regenerateOrderNumberForSelectedPartner();
         applyAutoBuffer();
-        $("createOrderStatus").textContent = "Order created and assigned.";
+        $("createOrderStatus").textContent = asDraft
+          ? "Draft saved — send it from the Drafts tab when you're ready."
+          : "Order created and assigned.";
         $("createOrderStatus").className = "status ok";
         loadOrders();
-        btn.disabled = false;
+        $("createOrderBtn").disabled = false;
+        $("createDraftBtn").disabled = false;
       } catch (e) {
         if (e.message === "order_number_taken" && !orderNumberManual && attempts < 8) {
           attempts++;
@@ -885,10 +1008,13 @@
           ? "This order number is already in use — try another."
           : "Could not create the order.";
         $("createOrderStatus").className = "status err";
-        btn.disabled = false;
+        $("createOrderBtn").disabled = false;
+        $("createDraftBtn").disabled = false;
       }
     })();
-  });
+  }
+  $("createOrderBtn").addEventListener("click", function () { submitCreateOrder(false); });
+  $("createDraftBtn").addEventListener("click", function () { submitCreateOrder(true); });
 
   /* ---------- orders: list ---------- */
   async function loadOrders(silent) {
@@ -927,7 +1053,8 @@
 
   function updateOrderTabCounts() {
     var today = todayDateStr();
-    var cToday = orders.filter(function (o) { return o.orderDate === today; }).length;
+    var cDraft = orders.filter(function (o) { return o.status === "draft"; }).length;
+    var cToday = orders.filter(function (o) { return o.orderDate === today && o.status !== "draft"; }).length;
     var cOffered = orders.filter(function (o) { return o.status === "offered"; }).length;
     var cAccepted = orders.filter(function (o) { return o.status === "accepted"; }).length;
     var cCompleted = orders.filter(function (o) { return o.status === "completed"; }).length;
@@ -944,9 +1071,14 @@
     $("statCompleted").textContent = cCompleted;
     $("statClosed").textContent = cClosed;
     $("statNoShow").textContent = cNoShow;
+    if ($("countAllOrders")) $("countAllOrders").textContent = (orders.length - cDraft) || "";
+    if ($("countDrafts")) $("countDrafts").textContent = cDraft || "";
   }
 
   function matchesOrderFilter(o) {
+    // Drafts live only in the Drafts tab (see renderDrafts) — never in the
+    // normal Orders tabs, the Today tab, or free-text search results.
+    if (o.status === "draft") return false;
     var q = $("fOrderSearch").value.trim().toLowerCase();
     if (q) {
       // Searching looks across every status, not just the open tab — matches
@@ -995,32 +1127,177 @@
       return ka < kb ? -dir : ka > kb ? dir : 0;
     });
     if (!rows.length) {
-      $("ordersList").innerHTML = '<tr><td colspan="7" class="empty-cell">' + EMPTY_ORDER_MESSAGE[orderTab] + "</td></tr>";
+      $("ordersList").innerHTML = '<tr><td colspan="8" class="empty-cell">' + EMPTY_ORDER_MESSAGE[orderTab] + "</td></tr>";
       $("ordersPager").innerHTML = "";
       return;
     }
     var pageResult = window.Paginate ? Paginate.slice(rows, ordersPage, PAGE_SIZE) : { page: 1, pages: 1, items: rows };
     ordersPage = pageResult.page;
     $("ordersList").innerHTML = pageResult.items.map(function (o) {
-      var isOpen = openOrderId === o.id;
       return '<tr class="data-row" data-order-toggle="' + o.id + '">' +
-        '<td class="mono col-main">' + (o.orderNumber ? "#" + esc(o.orderNumber) : "#" + o.id) + "</td>" +
+        '<td class="mono col-main">' + copyableHtml(o.orderNumber ? "#" + o.orderNumber : "#" + o.id, o.orderNumber || String(o.id)) + "</td>" +
+        '<td class="mono">' + (o.adminNumber ? copyableHtml(o.adminNumber, o.adminNumber) : '<span style="color:var(--ink-2);">—</span>') + "</td>" +
         "<td>" + esc(o.companyName) + "</td>" +
         "<td>" + esc(o.pickup) + " → " + esc(o.dropoff) + "</td>" +
         '<td class="mono">' + esc(fmtDay(o.orderDate)) + (o.orderTime ? " · " + esc(o.orderTime) : "") + "</td>" +
         '<td class="mono">' + (o.price ? esc(o.price) + " " + esc(o.currency) : "—") + "</td>" +
         "<td>" + statusBadge(o) + "</td>" +
-        '<td class="col-chev">' + (isOpen ? "▾" : "›") + "</td>" +
-        "</tr>" +
-        '<tr><td colspan="7" class="detail-cell"><div class="detail' + (isOpen ? " open" : "") + '" id="orderdetail-' + o.id + '"></div></td></tr>';
+        '<td class="col-chev">›</td>' +
+        "</tr>";
     }).join("");
     $("ordersPager").innerHTML = window.Paginate ? Paginate.barHtml(pageResult.page, pageResult.pages) : "";
     if (openOrderId != null) renderOrderDetail(openOrderId);
+    if (ordersView === "drafts") renderDrafts();
+  }
+
+  /* ---------- orders: Orders / Drafts view switch ---------- */
+  var ordersView = "orders";
+  function setOrdersView(view) {
+    ordersView = view;
+    $("tabOrdersView").classList.toggle("active", view === "orders");
+    $("tabDraftsView").classList.toggle("active", view === "drafts");
+    $("ordersNormalView").hidden = view !== "orders";
+    $("draftsView").hidden = view !== "drafts";
+    if (view === "drafts") renderDrafts();
+  }
+  $("tabOrdersView").addEventListener("click", function () { setOrdersView("orders"); });
+  $("tabDraftsView").addEventListener("click", function () { setOrdersView("drafts"); });
+
+  /* ---------- orders: Drafts list + bulk send ---------- */
+  function updateSendDraftsButton() {
+    var checked = $("draftsList").querySelectorAll(".draft-check:checked");
+    var all = $("draftsList").querySelectorAll(".draft-check");
+    $("draftsSelectAll").checked = all.length > 0 && checked.length === all.length;
+    if (!all.length) {
+      $("sendDraftsBtn").disabled = true;
+      $("sendDraftsBtn").textContent = "No drafts";
+    } else if (!checked.length) {
+      $("sendDraftsBtn").disabled = true;
+      $("sendDraftsBtn").textContent = "Select drafts to send";
+    } else {
+      $("sendDraftsBtn").disabled = false;
+      $("sendDraftsBtn").textContent = "Send selected (" + checked.length + ")";
+    }
+  }
+
+  function renderDrafts() {
+    var drafts = orders.filter(function (o) { return o.status === "draft"; });
+    drafts = drafts.slice().sort(function (a, b) {
+      var ka = (a.orderDate || "") + " " + (a.orderTime || "");
+      var kb = (b.orderDate || "") + " " + (b.orderTime || "");
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    });
+    if (!drafts.length) {
+      $("draftsList").innerHTML = '<tr><td colspan="8" class="empty-cell">No drafts right now — use "Create draft" above to save one without notifying the partner.</td></tr>';
+      updateSendDraftsButton();
+      return;
+    }
+    $("draftsList").innerHTML = drafts.map(function (o) {
+      return '<tr class="data-row" data-order-toggle="' + o.id + '">' +
+        '<td class="col-check"><input type="checkbox" class="draft-check" data-draft-id="' + o.id + '"></td>' +
+        '<td class="mono col-main">' + copyableHtml(o.orderNumber ? "#" + o.orderNumber : "#" + o.id, o.orderNumber || String(o.id)) + "</td>" +
+        '<td class="mono">' + (o.adminNumber ? copyableHtml(o.adminNumber, o.adminNumber) : '<span style="color:var(--ink-2);">—</span>') + "</td>" +
+        "<td>" + esc(o.companyName) + "</td>" +
+        "<td>" + esc(o.pickup) + " → " + esc(o.dropoff) + "</td>" +
+        '<td class="mono">' + esc(fmtDay(o.orderDate)) + (o.orderTime ? " · " + esc(o.orderTime) : "") + "</td>" +
+        '<td class="mono">' + (o.price ? esc(o.price) + " " + esc(o.currency) : "—") + "</td>" +
+        '<td class="col-chev">›</td>' +
+        "</tr>";
+    }).join("");
+    updateSendDraftsButton();
+  }
+
+  $("draftsSelectAll").addEventListener("change", function () {
+    var checked = this.checked;
+    $("draftsList").querySelectorAll(".draft-check").forEach(function (c) { c.checked = checked; });
+    updateSendDraftsButton();
+  });
+  $("draftsList").addEventListener("change", function (e) {
+    if (e.target.classList.contains("draft-check")) updateSendDraftsButton();
+  });
+  $("draftsList").addEventListener("click", function (e) {
+    if (e.target.closest(".draft-check")) return;
+    var copyEl = e.target.closest("[data-copy]");
+    if (copyEl) { copyToClipboard(copyEl.getAttribute("data-copy"), copyEl); return; }
+    var toggleEl = e.target.closest("[data-order-toggle]");
+    if (toggleEl) openOrderDetail(Number(toggleEl.getAttribute("data-order-toggle")));
+  });
+  $("sendDraftsBtn").addEventListener("click", async function () {
+    var ids = Array.prototype.map.call($("draftsList").querySelectorAll(".draft-check:checked"), function (c) {
+      return Number(c.getAttribute("data-draft-id"));
+    });
+    if (!ids.length) return;
+    this.disabled = true;
+    $("draftsSendStatus").textContent = "Sending…";
+    $("draftsSendStatus").className = "status";
+    try {
+      var data = await api("/api/admin/order-send-drafts", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: ids })
+      });
+      $("draftsSendStatus").textContent = "Sent " + data.sent + " order(s) to the partner.";
+      $("draftsSendStatus").className = "status ok";
+      await loadOrders();
+    } catch (e) {
+      $("draftsSendStatus").textContent = "Could not send the selected drafts.";
+      $("draftsSendStatus").className = "status err";
+      this.disabled = false;
+    }
+  });
+
+  function openOrderDetail(id) {
+    var o = orders.filter(function (x) { return x.id === id; })[0];
+    openOrderId = id;
+    $("odTitle").textContent = o ? "Order " + (o.orderNumber ? "#" + o.orderNumber : "#" + o.id) : "Order";
+    $("odStatusBadge").innerHTML = o ? statusBadge(o) : "";
+    $("ordersListView").hidden = true;
+    $("orderDetailView").hidden = false;
+    window.scrollTo(0, 0);
+    renderOrderDetail(id);
+    if (o && o.status === "no_show" && !evidenceCache[id]) loadOrderEvidence(id);
+  }
+  function closeOrderDetail() {
+    openOrderId = null;
+    $("orderDetailView").hidden = true;
+    $("ordersListView").hidden = false;
+  }
+  if ($("odBack")) $("odBack").addEventListener("click", closeOrderDetail);
+
+  // Renders a value with a small copy-to-clipboard button next to it. `label`
+  // is the escaped HTML shown; `raw` is the exact text copied (unescaped).
+  function copyableHtml(label, raw) {
+    if (raw == null || raw === "") return esc(label);
+    return '<span class="copyable">' + esc(label) +
+      ' <button type="button" class="copy-btn" data-copy="' + esc(raw) + '" title="Copy">' +
+      '<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M4.5 13H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v.5"/></svg>' +
+      "</button></span>";
+  }
+
+  function flashCopied(btn) {
+    btn.classList.add("copied");
+    setTimeout(function () { btn.classList.remove("copied"); }, 1200);
+  }
+  function fallbackCopyText(text, btn) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    } catch (e) { /* no-op: feedback still flashes below */ }
+    flashCopied(btn);
+  }
+  function copyToClipboard(text, btn) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { flashCopied(btn); }).catch(function () { fallbackCopyText(text, btn); });
+    } else {
+      fallbackCopyText(text, btn);
+    }
   }
 
   function renderOrderDetail(id) {
-    var el = $("orderdetail-" + id);
-    if (!el) return;
+    var el = $("odBody");
+    if (!el || openOrderId !== id) return;
     var o = orders.filter(function (x) { return x.id === id; })[0];
     if (!o) return;
 
@@ -1070,6 +1347,7 @@
       '<summary class="minibtn" style="display:inline-block;">Edit order</summary>' +
       '<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">' +
       '<div class="field" style="min-width:160px;flex:1 1 160px;margin-bottom:0;"><label>Order number</label><input type="text" data-edit-field="orderNumber" value="' + esc(o.orderNumber || "") + '"></div>' +
+      '<div class="field admin-field" style="min-width:110px;flex:1 1 110px;margin-bottom:0;"><label>Admin # <span class="tag">Admin only</span></label><input type="text" data-edit-field="adminNumber" value="' + esc(o.adminNumber || "") + '"></div>' +
       '<div class="field" style="min-width:150px;flex:1 1 150px;margin-bottom:0;"><label>Pickup</label><input type="text" data-edit-field="pickup" value="' + esc(o.pickup) + '"></div>' +
       '<div class="field" style="min-width:150px;flex:1 1 150px;margin-bottom:0;"><label>Dropoff</label><input type="text" data-edit-field="dropoff" value="' + esc(o.dropoff) + '"></div>' +
       '<div class="field" style="min-width:120px;flex:1 1 120px;margin-bottom:0;"><label>Flight number</label><input type="text" data-edit-field="flightNumber" value="' + esc(o.flightNumber || "") + '"></div>' +
@@ -1176,8 +1454,24 @@
         "</div></div>"
       : "";
 
-    el.innerHTML =
+    var quickCopyBlock =
       '<div class="block" style="margin-top:0;padding-top:0;border-top:0;">' +
+      '<div class="dt-grid">' +
+      '<div><div class="dt-label">Order number</div><div class="dt-val">' + copyableHtml(o.orderNumber ? "#" + o.orderNumber : "#" + o.id, o.orderNumber || String(o.id)) + "</div></div>" +
+      (o.adminNumber
+        ? '<div><div class="dt-label">Admin # <span class="tag">Admin only</span></div><div class="dt-val">' + copyableHtml(o.adminNumber, o.adminNumber) + "</div></div>"
+        : "") +
+      (o.passengerName
+        ? '<div><div class="dt-label">Passenger name</div><div class="dt-val">' + copyableHtml(o.passengerName, o.passengerName) + "</div></div>"
+        : "") +
+      (o.passengerPhone
+        ? '<div><div class="dt-label">Passenger phone</div><div class="dt-val mono">' + copyableHtml(o.passengerPhone, o.passengerPhone) + "</div></div>"
+        : "") +
+      "</div></div>";
+
+    el.innerHTML =
+      quickCopyBlock +
+      '<div class="block">' +
       routeBlock +
       iconRows +
       meetGreetBlock +
@@ -1193,8 +1487,25 @@
       reassignBlock;
   }
 
-  $("ordersList").addEventListener("click", async function (e) {
+  $("ordersList").addEventListener("click", function (e) {
+    var copyBtn = e.target.closest("[data-copy]");
+    if (copyBtn) {
+      e.stopPropagation();
+      copyToClipboard(copyBtn.getAttribute("data-copy"), copyBtn);
+      return;
+    }
     var toggle = e.target.closest("[data-order-toggle]");
+    if (!toggle) return;
+    openOrderDetail(Number(toggle.getAttribute("data-order-toggle")));
+  });
+
+  $("orderDetailView").addEventListener("click", async function (e) {
+    var copyBtn = e.target.closest("[data-copy]");
+    if (copyBtn) {
+      e.stopPropagation();
+      copyToClipboard(copyBtn.getAttribute("data-copy"), copyBtn);
+      return;
+    }
     var complete = e.target.closest("[data-order-complete]");
     var cancel = e.target.closest("[data-order-cancel]");
     var hide = e.target.closest("[data-order-hide]");
@@ -1204,18 +1515,6 @@
     var noshowConfirm = e.target.closest("[data-noshow-confirm]");
     var noshowReject = e.target.closest("[data-noshow-reject]");
 
-    if (toggle && !complete && !cancel && !hide && !del && !reassign && !editSave && !noshowConfirm && !noshowReject) {
-      var id = Number(toggle.getAttribute("data-order-toggle"));
-      openOrderId = openOrderId === id ? null : id;
-      renderOrders();
-      if (openOrderId != null) {
-        var openedOrder = orders.filter(function (x) { return x.id === openOrderId; })[0];
-        if (openedOrder && openedOrder.status === "no_show" && !evidenceCache[openOrderId]) {
-          loadOrderEvidence(openOrderId);
-        }
-      }
-      return;
-    }
     if (hide) {
       e.stopPropagation();
       var hideId = Number(hide.getAttribute("data-order-hide"));
@@ -1225,7 +1524,7 @@
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: hideId })
         });
-        openOrderId = null;
+        closeOrderDetail();
         await loadOrders();
       } catch (err) {
         alert("Could not delete the order.");
@@ -1241,7 +1540,7 @@
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: delId })
         });
-        openOrderId = null;
+        closeOrderDetail();
         await loadOrders();
       } catch (err) {
         alert("Could not delete the order.");
@@ -1269,7 +1568,7 @@
             orderDate: fields.orderDate, orderTime: fields.orderTime, price: fields.price, currency: fields.currency
           })
         });
-        openOrderId = null;
+        closeOrderDetail();
         await loadOrders();
       } catch (err) {
         if (statusEl) { statusEl.textContent = "Could not reassign. Try again."; statusEl.className = "status err"; }
@@ -1294,7 +1593,7 @@
         await api("/api/admin/order-edit", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            id: editId, orderNumber: editFields.orderNumber, pickup: editFields.pickup, dropoff: editFields.dropoff,
+            id: editId, orderNumber: editFields.orderNumber, adminNumber: editFields.adminNumber, pickup: editFields.pickup, dropoff: editFields.dropoff,
             flightNumber: editFields.flightNumber, flightTime: editFields.flightTime, bufferMinutes: editFields.bufferMinutes,
             orderDate: editFields.orderDate, orderTime: editFields.orderTime, vehicleType: editFields.vehicleType,
             vehiclesNeeded: editFields.vehiclesNeeded || "1",
@@ -1327,7 +1626,7 @@
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: ncId, action: "confirm" })
         });
-        openOrderId = null;
+        closeOrderDetail();
         await loadOrders();
       } catch (err) {
         noshowConfirm.disabled = false;
