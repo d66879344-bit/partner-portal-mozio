@@ -6,6 +6,7 @@
   var detailCache = {};
   var openId = null;
   var openOrderId = null;
+  var renderedOrderDetailId = null; // which order's detail is currently drawn into #odBody
   var STAGE_LABELS = { on_the_way: "On the way", arrived: "Arrived at pickup", in_car: "Passenger on board", dropped_off: "Dropped off" };
   var orderNumberManual = false;
   var bufferManual = false;
@@ -1181,6 +1182,15 @@
   }
 
   function renderDrafts() {
+    // This also runs on every background poll tick (every 5s) while the Drafts
+    // view is open, not just when the admin first switches to it. A full
+    // innerHTML replace would otherwise always rebuild unchecked checkboxes,
+    // silently clearing whatever drafts the admin had selected to send. Carry
+    // the checked ids across the rebuild instead.
+    var checkedIds = {};
+    $("draftsList").querySelectorAll(".draft-check:checked").forEach(function (c) {
+      checkedIds[c.getAttribute("data-draft-id")] = true;
+    });
     var drafts = orders.filter(function (o) { return o.status === "draft"; });
     drafts = drafts.slice().sort(function (a, b) {
       var ka = (a.orderDate || "") + " " + (a.orderTime || "");
@@ -1194,7 +1204,7 @@
     }
     $("draftsList").innerHTML = drafts.map(function (o) {
       return '<tr class="data-row" data-order-toggle="' + o.id + '">' +
-        '<td class="col-check"><input type="checkbox" class="draft-check" data-draft-id="' + o.id + '"></td>' +
+        '<td class="col-check"><input type="checkbox" class="draft-check" data-draft-id="' + o.id + '"' + (checkedIds[o.id] ? " checked" : "") + "></td>" +
         '<td class="mono col-main">' + copyableHtml(o.orderNumber ? "#" + o.orderNumber : "#" + o.id, o.orderNumber || String(o.id)) + "</td>" +
         '<td class="mono">' + (o.adminNumber ? copyableHtml(o.adminNumber, o.adminNumber) : '<span style="color:var(--ink-2);">—</span>') + "</td>" +
         "<td>" + esc(o.companyName) + "</td>" +
@@ -1258,6 +1268,7 @@
   }
   function closeOrderDetail() {
     openOrderId = null;
+    renderedOrderDetailId = null;
     $("orderDetailView").hidden = true;
     $("ordersListView").hidden = false;
   }
@@ -1295,9 +1306,19 @@
     }
   }
 
-  function renderOrderDetail(id) {
+  function renderOrderDetail(id, force) {
     var el = $("odBody");
     if (!el || openOrderId !== id) return;
+    // This runs on every background poll tick (every 5s) while an order is open,
+    // not just when the admin first opens it. A full el.innerHTML replace would
+    // snap any open <details> (Edit order / Reassign) back to closed and wipe
+    // out whatever the admin is mid-typing. So once that panel is expanded, skip
+    // re-rendering THIS SAME order's detail until they close it or save — same
+    // "don't overwrite what's being actively edited" rule used elsewhere in this
+    // admin panel. (Only applies to a refresh of the order already shown — opening
+    // a different/new order below always renders fresh.) Pass force=true right
+    // after a successful "Save changes" to still show the saved values immediately.
+    if (!force && renderedOrderDetailId === id && el.querySelector("details.block[open]")) return;
     var o = orders.filter(function (x) { return x.id === id; })[0];
     if (!o) return;
 
@@ -1485,6 +1506,7 @@
       "</div>" +
       editBlock +
       reassignBlock;
+    renderedOrderDetailId = id;
   }
 
   $("ordersList").addEventListener("click", function (e) {
@@ -1606,8 +1628,11 @@
         // The reload below re-renders this same detail panel (it stays open,
         // since openOrderId is unchanged) with the freshly saved values —
         // that's the visible confirmation, so there's no separate "Saved"
-        // message that would just be overwritten by it anyway.
+        // message that would just be overwritten by it anyway. Forced, since
+        // the Edit order panel is still open at this point and would otherwise
+        // be skipped by the in-progress-edit guard above.
         await loadOrders(true);
+        renderOrderDetail(editId, true);
       } catch (err) {
         var editMsg = (err && err.message === "order_number_taken") ? "This order number is already in use." : "Could not save. Try again.";
         if (editStatusEl) { editStatusEl.textContent = editMsg; editStatusEl.className = "status err"; }
