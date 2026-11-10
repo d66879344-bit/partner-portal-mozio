@@ -12,6 +12,7 @@
   var bufferManual = false;
   var PAGE_SIZE = 20;
   var partnersPage = 1;
+  var partnerCountryTab = "";
   var ordersPage = 1;
   var financePage = 1;
   var passengers = [];
@@ -115,7 +116,7 @@
     try {
       var data = await api("/api/admin/partners");
       partners = data.partners || [];
-      populatePartnersCountryFilter();
+      renderPartnerCountryTabs();
       renderPartners();
       populatePartnerSelect();
       populateOrderPartnerFilter();
@@ -139,9 +140,9 @@
       var hay = [p.companyName, p.email, p.accountId].filter(Boolean).join(" ").toLowerCase();
       if (hay.indexOf(q) === -1) return false;
     }
-    var fs = $("fStatus").value, fc = $("fCountry").value, ft = $("fTrialState").value, fo = $("fOrganization").value;
+    var fs = $("fStatus").value, ft = $("fTrialState").value, fo = $("fOrganization").value;
     if (fs && p.status !== fs) return false;
-    if (fc && p.country !== fc) return false;
+    if (partnerCountryTab && p.country !== partnerCountryTab) return false;
     if (ft) {
       var info = window.TrialInfo ? TrialInfo.compute(p.trialStartedAt, p.trialSimulateEnded) : { state: "not_started" };
       if (info.state !== ft) return false;
@@ -169,19 +170,32 @@
       "</div>";
   }
 
-  function populatePartnersCountryFilter() {
-    var prev = $("fCountry").value;
-    var seen = {};
-    var rows = [];
+  function renderPartnerCountryTabs() {
+    var byCountry = {};
     partners.forEach(function (p) {
-      if (!p.country || seen[p.country]) return;
-      seen[p.country] = true;
-      rows.push([p.country, p.countryName || p.country]);
+      if (!p.country) return;
+      if (!byCountry[p.country]) byCountry[p.country] = { name: p.countryName || p.country, count: 0 };
+      byCountry[p.country].count++;
     });
-    rows.sort(function (a, b) { return a[1].localeCompare(b[1]); });
-    $("fCountry").innerHTML = '<option value="">All countries</option>' +
-      rows.map(function (r) { return '<option value="' + esc(r[0]) + '">' + esc(r[1]) + "</option>"; }).join("");
-    $("fCountry").value = prev;
+    var codes = Object.keys(byCountry).sort(function (a, b) {
+      return byCountry[a].name.localeCompare(byCountry[b].name);
+    });
+    if (partnerCountryTab && !byCountry[partnerCountryTab]) partnerCountryTab = "";
+    var tabsHtml = '<button type="button" class="tab" data-country-tab="" aria-pressed="' + (partnerCountryTab === "" ? "true" : "false") + '">All countries <span class="tab-count">' + partners.length + "</span></button>" +
+      codes.map(function (code) {
+        var c = byCountry[code];
+        return '<button type="button" class="tab" data-country-tab="' + esc(code) + '" aria-pressed="' + (partnerCountryTab === code ? "true" : "false") + '">' +
+          esc(c.name) + ' <span class="tab-count">' + c.count + "</span></button>";
+      }).join("");
+    $("partnerCountryTabs").innerHTML = tabsHtml;
+    $("partnerCountryTabs").querySelectorAll(".tab").forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        $("partnerCountryTabs").querySelectorAll(".tab").forEach(function (t) { t.setAttribute("aria-pressed", String(t === tab)); });
+        partnerCountryTab = tab.getAttribute("data-country-tab");
+        partnersPage = 1;
+        renderPartners();
+      });
+    });
   }
 
   function renderPartners() {
@@ -477,7 +491,6 @@
 
   if ($("fPartnerSearch")) $("fPartnerSearch").addEventListener("input", function () { partnersPage = 1; renderPartners(); });
   $("fStatus").addEventListener("change", function () { partnersPage = 1; renderPartners(); });
-  $("fCountry").addEventListener("change", function () { partnersPage = 1; renderPartners(); });
   $("fTrialState").addEventListener("change", function () { partnersPage = 1; renderPartners(); });
   $("fOrganization").addEventListener("change", function () { partnersPage = 1; renderPartners(); });
 
@@ -1148,21 +1161,11 @@
     }).join("");
     $("ordersPager").innerHTML = window.Paginate ? Paginate.barHtml(pageResult.page, pageResult.pages) : "";
     if (openOrderId != null) renderOrderDetail(openOrderId);
-    if (ordersView === "drafts") renderDrafts();
+    // Drafts now live on their own "Create Order" tab rather than behind a
+    // view toggle inside Orders, so keep them rendered in step with the
+    // underlying orders data every time, not only while that tab is open.
+    renderDrafts();
   }
-
-  /* ---------- orders: Orders / Drafts view switch ---------- */
-  var ordersView = "orders";
-  function setOrdersView(view) {
-    ordersView = view;
-    $("tabOrdersView").classList.toggle("active", view === "orders");
-    $("tabDraftsView").classList.toggle("active", view === "drafts");
-    $("ordersNormalView").hidden = view !== "orders";
-    $("draftsView").hidden = view !== "drafts";
-    if (view === "drafts") renderDrafts();
-  }
-  $("tabOrdersView").addEventListener("click", function () { setOrdersView("orders"); });
-  $("tabDraftsView").addEventListener("click", function () { setOrdersView("drafts"); });
 
   /* ---------- orders: Drafts list + bulk send ---------- */
   function updateSendDraftsButton() {
@@ -1256,6 +1259,11 @@
   });
 
   function openOrderDetail(id) {
+    // Order detail lives inside the "Orders" panel. A draft row click comes
+    // from the "Create Order" tab, so switch tabs first (reusing the normal
+    // tab-click handler) in case we're not already there.
+    var ordersTabBtn = $("mainTabs").querySelector('[data-tab="orders"]');
+    if (ordersTabBtn && ordersTabBtn.getAttribute("aria-pressed") !== "true") ordersTabBtn.click();
     var o = orders.filter(function (x) { return x.id === id; })[0];
     openOrderId = id;
     $("odTitle").textContent = o ? "Order " + (o.orderNumber ? "#" + o.orderNumber : "#" + o.id) : "Order";
