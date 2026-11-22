@@ -1,4 +1,5 @@
 import { getPartnerId } from "../../_lib/auth.js";
+import { getHidePassengerData, passengerDataHidden } from "../../_lib/partner-privacy.js";
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -6,6 +7,7 @@ export async function onRequestGet(context) {
   if (!partnerId) return Response.json({ error: "unauthorized" }, { status: 401 });
   if (!env.DB) return Response.json({ error: "database_not_configured" }, { status: 500 });
 
+  const hideFlag = await getHidePassengerData(env.DB, partnerId);
   const { results } = await env.DB.prepare(
     `SELECT o.id, o.order_number, o.pickup, o.dropoff, o.flight_number, o.flight_time, o.buffer_minutes,
             o.order_date, o.order_time, o.vehicle_type, o.vehicles_needed,
@@ -23,7 +25,10 @@ export async function onRequestGet(context) {
     "SELECT COUNT(*) AS n FROM orders WHERE partner_id = ? AND status IN ('declined', 'cancelled')"
   ).bind(partnerId).first();
 
-  const orders = (results || []).map((o) => ({
+  const orders = (results || []).map((o) => {
+    // When the admin has switched it on for this partner, completed trips no longer carry the passenger's contacts.
+    const hidden = passengerDataHidden(hideFlag, o);
+    return {
     id: o.id,
     orderNumber: o.order_number,
     pickup: o.pickup,
@@ -37,17 +42,18 @@ export async function onRequestGet(context) {
     vehiclesNeeded: o.vehicles_needed != null ? o.vehicles_needed : 1,
     passengers: o.passengers,
     luggage: o.luggage,
-    passengerName: o.passenger_name,
-    passengerPhone: o.passenger_phone,
-    meetGreet: o.meet_greet,
-    signText: o.sign_text,
+    passengerName: hidden ? null : o.passenger_name,
+    passengerPhone: hidden ? null : o.passenger_phone,
+    meetGreet: hidden ? null : o.meet_greet,
+    signText: hidden ? null : o.sign_text,
+    contactsHidden: hidden,
     driverId: o.driver_id,
     driverName: o.driver_name,
     vehicleId: o.vehicle_id,
     vehiclePlate: o.vehicle_plate,
     price: o.price,
     currency: o.currency,
-    notes: o.notes,
+    notes: hidden ? null : o.notes,
     status: o.status,
     tripStage: o.trip_stage,
     noShowType: o.no_show_type,
@@ -55,7 +61,8 @@ export async function onRequestGet(context) {
     noShowReviewStatus: o.no_show_review_status,
     createdAt: o.created_at,
     respondedAt: o.responded_at,
-  }));
+    };
+  });
 
   return Response.json({ ok: true, orders, declinedCount: closedRow ? closedRow.n : 0 });
 }

@@ -1,3 +1,4 @@
+import { getHidePassengerData } from "../../_lib/partner-privacy.js";
 import { checkAdminSecret } from "../../_lib/auth.js";
 
 function docShape(d) {
@@ -107,6 +108,7 @@ export async function onRequestGet(context) {
       payAccountNumber: partner.pay_account_number || "",
       paySwift: partner.pay_swift || "",
       payCurrency: partner.pay_currency || "",
+      hidePassengerData: await getHidePassengerData(env.DB, id),
     },
     company: { documents: byOwner("company", null) },
     other: { documents: byOwner("other", null) },

@@ -89,6 +89,7 @@
 
       empty_new: "No new orders right now.", empty_accepted: "Nothing in progress right now.", empty_completed: "No completed orders yet.",
 
+      pc_hidden: "Hidden", pc_hidden_note: "Passenger contacts are hidden for completed trips.",
       od_trip: "Trip", od_passenger_price: "Passenger & price", od_vehicle_driver: "Vehicle & driver", od_trip_progress: "Trip progress", od_route_link: "Route: pickup → dropoff",
       fl_date: "Date", fl_pickup_time: "Pickup time", fl_buffer_time: "Waiting time", fl_vehicle_type: "Vehicle type", fl_vehicles_needed: "Vehicles needed", fl_meet_greet: "Meet & greet sign",
       btn_accept: "Accept", btn_decline: "Decline", btn_save: "Save", btn_more: "More", btn_back_to_orders: "Back to orders",
@@ -215,6 +216,7 @@
 
       empty_new: "Пока нет новых заказов.", empty_accepted: "Сейчас ничего не в работе.", empty_completed: "Завершённых заказов пока нет.",
 
+      pc_hidden: "Скрыто", pc_hidden_note: "Контакты пассажира скрыты для завершённых поездок.",
       od_trip: "Поездка", od_passenger_price: "Пассажир и цена", od_vehicle_driver: "Авто и водитель", od_trip_progress: "Статус поездки", od_route_link: "Маршрут: подача → высадка",
       fl_date: "Дата", fl_pickup_time: "Время подачи", fl_buffer_time: "Время ожидания", fl_vehicle_type: "Тип авто", fl_vehicles_needed: "Количество машин", fl_meet_greet: "Табличка для встречи",
       btn_accept: "Принять", btn_decline: "Отклонить", btn_save: "Сохранить", btn_more: "Ещё", btn_back_to_orders: "Назад к заказам",
@@ -341,6 +343,7 @@
 
       empty_new: "No hay pedidos nuevos ahora mismo.", empty_accepted: "Nada en curso ahora mismo.", empty_completed: "Aún no hay pedidos completados.",
 
+      pc_hidden: "Oculto", pc_hidden_note: "Los datos de contacto del pasajero están ocultos en los viajes completados.",
       od_trip: "Viaje", od_passenger_price: "Pasajero y precio", od_vehicle_driver: "Vehículo y conductor", od_trip_progress: "Progreso del viaje", od_route_link: "Ruta: recogida → destino",
       fl_date: "Fecha", fl_pickup_time: "Hora de recogida", fl_buffer_time: "Tiempo de espera", fl_vehicle_type: "Tipo de vehículo", fl_vehicles_needed: "Vehículos necesarios", fl_meet_greet: "Cartel de bienvenida",
       btn_accept: "Aceptar", btn_decline: "Rechazar", btn_save: "Guardar", btn_more: "Más", btn_back_to_orders: "Volver a pedidos",
@@ -467,6 +470,7 @@
 
       empty_new: "Καμία νέα παραγγελία αυτή τη στιγμή.", empty_accepted: "Τίποτα σε εξέλιξη αυτή τη στιγμή.", empty_completed: "Καμία ολοκληρωμένη παραγγελία ακόμα.",
 
+      pc_hidden: "Κρυφό", pc_hidden_note: "Τα στοιχεία επικοινωνίας του επιβάτη είναι κρυφά στις ολοκληρωμένες διαδρομές.",
       od_trip: "Διαδρομή", od_passenger_price: "Επιβάτης & τιμή", od_vehicle_driver: "Όχημα & οδηγός", od_trip_progress: "Πρόοδος διαδρομής", od_route_link: "Διαδρομή: παραλαβή → προορισμός",
       fl_date: "Ημερομηνία", fl_pickup_time: "Ώρα παραλαβής", fl_buffer_time: "Χρόνος αναμονής", fl_vehicle_type: "Τύπος οχήματος", fl_vehicles_needed: "Απαιτούμενα οχήματα", fl_meet_greet: "Πινακίδα υποδοχής",
       btn_accept: "Αποδοχή", btn_decline: "Απόρριψη", btn_save: "Αποθήκευση", btn_more: "Περισσότερα", btn_back_to_orders: "Πίσω στις παραγγελίες",
@@ -593,6 +597,7 @@
 
       empty_new: "Aucune nouvelle commande pour le moment.", empty_accepted: "Rien en cours pour le moment.", empty_completed: "Aucune commande terminée pour le moment.",
 
+      pc_hidden: "Masqué", pc_hidden_note: "Les coordonnées du passager sont masquées pour les trajets terminés.",
       od_trip: "Trajet", od_passenger_price: "Passager & prix", od_vehicle_driver: "Véhicule & chauffeur", od_trip_progress: "Progression du trajet", od_route_link: "Itinéraire : prise en charge → destination",
       fl_date: "Date", fl_pickup_time: "Heure de prise en charge", fl_buffer_time: "Temps d'attente", fl_vehicle_type: "Type de véhicule", fl_vehicles_needed: "Véhicules nécessaires", fl_meet_greet: "Pancarte d'accueil",
       btn_accept: "Accepter", btn_decline: "Refuser", btn_save: "Enregistrer", btn_more: "Plus", btn_back_to_orders: "Retour aux commandes",
@@ -719,6 +724,7 @@
 
       empty_new: "Sem pedidos novos neste momento.", empty_accepted: "Nada em curso neste momento.", empty_completed: "Ainda não há pedidos concluídos.",
 
+      pc_hidden: "Oculto", pc_hidden_note: "Os contactos do passageiro estão ocultos nas viagens concluídas.",
       od_trip: "Viagem", od_passenger_price: "Passageiro e preço", od_vehicle_driver: "Veículo e motorista", od_trip_progress: "Progresso da viagem", od_route_link: "Rota: embarque → destino",
       fl_date: "Data", fl_pickup_time: "Hora de recolha", fl_buffer_time: "Tempo de espera", fl_vehicle_type: "Tipo de veículo", fl_vehicles_needed: "Veículos necessários", fl_meet_greet: "Placa de boas-vindas",
       btn_accept: "Aceitar", btn_decline: "Recusar", btn_save: "Guardar", btn_more: "Mais", btn_back_to_orders: "Voltar aos pedidos",

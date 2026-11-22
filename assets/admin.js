@@ -357,6 +357,13 @@
           "</div>"
         : "") +
       "</div>" +
+      '<div class="block"><div class="block-title">Passenger data</div>' +
+      '<div style="display:flex;align-items:flex-start;gap:12px;">' +
+      '<label class="toggle-switch" style="flex:none;margin-top:2px;"><input type="checkbox" data-hide-pax="' + p.id + '"' + (p.hidePassengerData ? " checked" : "") + '><span class="slider"></span></label>' +
+      '<div><div style="font-weight:600;">Hide passenger data in completed trips</div>' +
+      '<div style="font-size:12.5px;color:var(--ink-2);margin-top:2px;max-width:60ch;">Name, phone and notes are hidden from this partner in all completed trips, including ones completed later. Trips that are still open stay visible. Turn it off to show the data again.</div>' +
+      '<div class="status" id="hidePaxStatus-' + p.id + '" style="margin:6px 0 0;"></div></div>' +
+      "</div></div>" +
       '<div class="block"><div class="block-title">Contract</div>' +
       (d.contract.documents.length ? docList(d.contract.documents) : '<p class="docrow" style="color:var(--ink-2);">Not uploaded yet.</p>') +
       (d.contract.documents.length
@@ -617,6 +624,24 @@
   });
 
   $("partnerDetailView").addEventListener("change", async function (e) {
+    var paxToggle = e.target.closest("[data-hide-pax]");
+    if (paxToggle) {
+      var hid = Number(paxToggle.getAttribute("data-hide-pax"));
+      var hon = paxToggle.checked;
+      var hst = $("hidePaxStatus-" + hid);
+      try {
+        await api("/api/admin/partner-privacy", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: hid, on: hon })
+        });
+        if (detailCache[hid]) detailCache[hid].partner.hidePassengerData = hon;
+        if (hst) { hst.textContent = hon ? "On: this partner no longer sees passenger data in completed trips." : "Off: this partner sees passenger data again."; hst.className = "status ok"; }
+      } catch (err) {
+        paxToggle.checked = !hon;
+        if (hst) { hst.textContent = "Could not save. Try again."; hst.className = "status err"; }
+      }
+      return;
+    }
     var toggle = e.target.closest("[data-trial-simulate]");
     if (!toggle) return;
     var tpid = Number(toggle.getAttribute("data-trial-simulate"));
